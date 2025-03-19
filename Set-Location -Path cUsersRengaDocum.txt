@@ -1,0 +1,30 @@
+Set-Location -Path "c:\Users\Renga\Documents\alcom-website"
+git init
+git add .
+git commit -m "Initial project setup
+
+Frontend:
+- Vite + React setup
+- React Router v6 configuration
+- TailwindCSS integration
+- Axios for API integration
+- Recoil state management setup
+
+Backend:
+- Node.js + Express.js server
+- PostgreSQL database setup
+- Prisma ORM integration
+- Database schema and models
+- JWT authentication structure
+- Initial seed data
+
+Configuration:
+- Environment variables
+- Project dependencies
+- Development tooling
+
+Features:
+- User authentication flow
+- Course management structure
+- API route setup
+- Database relationships"

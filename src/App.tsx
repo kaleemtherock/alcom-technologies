@@ -16,6 +16,9 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import UserDashboard from './components/dashboard/UserDashboard';
 import VideoClassroom from './components/dashboard/VideoClassroom';
 import CourseContent from './components/courses/CourseContent';
+import SignUp from './pages/auth/SignupPage';  // Updated to use SignupPage instead of SignUp
+import UnauthorizedPage from './pages/auth/UnauthorizedPage';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
   return (

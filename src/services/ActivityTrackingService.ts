@@ -1,55 +1,64 @@
 import { v4 as uuidv4 } from 'uuid';
+import pool from '../config/database';
 
 interface ActivityLog {
   id: string;
   userId: string;
-  action: 'view' | 'edit' | 'comment' | 'share' | 'download';
+  action: string;  // Made more flexible to accommodate course actions
   timestamp: Date;
   metadata: Record<string, any>;
 }
 
-class ActivityTrackingService {
-  private activities: ActivityLog[] = [];
-
-  logActivity(userId: string, action: ActivityLog['action'], metadata: Record<string, any>) {
-    const activity: ActivityLog = {
-      id: uuidv4(),
-      userId,
-      action,
-      timestamp: new Date(),
-      metadata
-    };
-    this.activities.push(activity);
-    this.syncWithServer(activity);
+export class ActivityTrackingService {
+  static async logActivity(userId: string, action: string, metadata: Record<string, any>) {
+    const client = await pool.connect();
+    try {
+      const activityId = uuidv4();
+      await client.query(
+        `INSERT INTO activity_logs (id, user_id, action, metadata, created_at)
+         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+         RETURNING *`,
+        [activityId, userId, action, metadata]
+      );
+      return activityId;
+    } finally {
+      client.release();
+    }
   }
 
-  private syncWithServer(activity: ActivityLog) {
-    // Implementation for server sync
-  }
-
-  getActivities(filters?: {
+  static async getActivities(filters?: {
     userId?: string;
-    action?: ActivityLog['action'];
+    action?: string;
     startDate?: Date;
     endDate?: Date;
   }) {
-    let filtered = [...this.activities];
-    
-    if (filters?.userId) {
-      filtered = filtered.filter(a => a.userId === filters.userId);
+    const client = await pool.connect();
+    try {
+      let query = 'SELECT * FROM activity_logs WHERE 1=1';
+      const params: any[] = [];
+      let paramCount = 1;
+
+      if (filters?.userId) {
+        query += ` AND user_id = $${paramCount++}`;
+        params.push(filters.userId);
+      }
+      if (filters?.action) {
+        query += ` AND action = $${paramCount++}`;
+        params.push(filters.action);
+      }
+      if (filters?.startDate) {
+        query += ` AND created_at >= $${paramCount++}`;
+        params.push(filters.startDate);
+      }
+      if (filters?.endDate) {
+        query += ` AND created_at <= $${paramCount++}`;
+        params.push(filters.endDate);
+      }
+
+      const result = await client.query(query, params);
+      return result.rows;
+    } finally {
+      client.release();
     }
-    if (filters?.action) {
-      filtered = filtered.filter(a => a.action === filters.action);
-    }
-    if (filters?.startDate) {
-      filtered = filtered.filter(a => a.timestamp >= filters.startDate!);
-    }
-    if (filters?.endDate) {
-      filtered = filtered.filter(a => a.timestamp <= filters.endDate!);
-    }
-    
-    return filtered;
   }
 }
-
-export default ActivityTrackingService;

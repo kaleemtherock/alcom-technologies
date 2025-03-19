@@ -12,3 +12,10 @@ export interface AuthContextType {
   logout: () => void;
   register: (name: string, email: string, password: string) => Promise<void>;
 }
+
+export interface SignUpForm {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}

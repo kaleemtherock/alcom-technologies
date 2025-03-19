@@ -108,7 +108,7 @@ export const enrollmentService = {
     } finally {
       client.release();
     }
-  }
+  }, // Add comma here
 
   async getBundlesForCourse(courseId: string): Promise<CourseBundle[]> {
     const client = await pool.connect();

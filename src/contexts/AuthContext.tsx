@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth } from '../utils/db';
+import { useNavigate } from 'react-router-dom';
 import { storage } from '../utils/storage';
 import { isTokenExpired } from '../utils/jwt';
+import api from '../services/api';
 
 interface User {
   id: string;
@@ -24,6 +25,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(() => storage.getUser());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,19 +66,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Update existing methods to use makeAuthenticatedRequest
+  // Keep only one isEnrolled function with the authenticated request check
   const isEnrolled = async (courseId: string) => {
     if (!user) return false;
-    
     try {
-      return await makeAuthenticatedRequest(async () => {
-        const enrollment = await db.getClient().query(
-          'SELECT * FROM enrollments WHERE user_id = $1 AND course_id = $2 AND status = $3',
-          [user.id, courseId, 'active']
-        );
-        return enrollment.rows.length > 0;
-      });
-    } catch (err) {
-      console.error('Error checking enrollment:', err);
+      const { data } = await api.get(`/enrollments/check/${courseId}`);
+      return data.isEnrolled;
+    } catch (error) {
+      console.error('Error checking enrollment:', error);
       return false;
     }
   };
@@ -84,10 +81,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       setError(null);
-      const { user, token } = await verifyUser(email, password);
-      storage.setToken(token);
-      storage.setUser(user);
-      setUser(user);
+      const { data } = await api.post('/auth/login', { email, password });
+      storage.setToken(data.token);
+      storage.setUser(data.user);
+      setUser(data.user);
     } catch (err: any) {
       setError('Failed to login. Please check your credentials.');
       throw err;
@@ -101,21 +98,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err) {
       setError('Failed to logout.');
       throw err;
-    }
-  };
-
-  const isEnrolled = async (courseId: string) => {
-    if (!user) return false;
-    
-    try {
-      const enrollment = await db.getClient().query(
-        'SELECT * FROM enrollments WHERE user_id = $1 AND course_id = $2 AND status = $3',
-        [user.id, courseId, 'active']
-      );
-      return enrollment.rows.length > 0;
-    } catch (err) {
-      console.error('Error checking enrollment:', err);
-      return false;
     }
   };
 
